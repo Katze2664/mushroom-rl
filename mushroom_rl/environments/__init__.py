@@ -1,3 +1,6 @@
+# Copied from dev branch of mushroom_rl
+# https://github.com/MushroomRL/mushroom-rl/blob/dev/mushroom_rl/environments/__init__.py
+
 try:
     Atari = None
     from .atari import Atari
@@ -9,6 +12,20 @@ try:
     Gym = None
     from .gym_env import Gym
     Gym.register()
+except ImportError:
+    pass
+
+# try:
+#     GymnasiumAtari = None
+#     from .gymnasium_atari import GymnasiumAtari
+#     GymnasiumAtari.register()
+# except ImportError:
+#     pass
+
+try:
+    Gymnasium = None
+    from .gymnasium_env import Gymnasium
+    Gymnasium.register()
 except ImportError:
     pass
 
@@ -48,6 +65,11 @@ try:
 except ImportError:
     pass
 
+# try:
+#     IsaacEnv = None
+#     from .isaac_env import IsaacEnv
+# except ImportError:
+#     pass
 
 try:
     PyBullet = None
