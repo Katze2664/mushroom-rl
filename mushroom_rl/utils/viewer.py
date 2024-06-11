@@ -1,3 +1,6 @@
+# Copied from dev branch of mushroom_rl
+# https://github.com/MushroomRL/mushroom-rl/blob/dev/mushroom_rl/utils/viewer.py
+
 import os
 if 'PYGAME_HIDE_SUPPORT_PROMPT' not in os.environ:
     os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
@@ -13,19 +16,21 @@ class ImageViewer:
     Interface to pygame for visualizing plain images.
 
     """
-    def __init__(self, size, dt):
+    def __init__(self, size, dt, headless = False):
         """
         Constructor.
 
         Args:
             size ([list, tuple]): size of the displayed image;
             dt (float): duration of a control step.
+            headless (bool, False): skip the display.
 
         """
         self._size = size
         self._dt = dt
         self._initialized = False
         self._screen = None
+        self._headless = headless
 
     def display(self, img):
         """
@@ -35,6 +40,9 @@ class ImageViewer:
             img: image to display.
 
         """
+        if self._headless:
+            return
+        
         if not self._initialized:
             pygame.init()
             self._initialized = True
@@ -422,4 +430,5 @@ class CV2Viewer:
         return cv2.getWindowProperty(self._window_name, cv2.WND_PROP_VISIBLE) == 0
 
     def close(self):
-        cv2.destroyWindow(self._window_name)
+        if self._created_viewer:
+            cv2.destroyWindow(self._window_name)
