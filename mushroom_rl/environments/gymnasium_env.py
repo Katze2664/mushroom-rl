@@ -2,6 +2,7 @@
 # https://github.com/MushroomRL/mushroom-rl/blob/dev/mushroom_rl/environments/gymnasium_env.py
 
 import warnings
+import numpy as np
 
 import gymnasium as gym
 from gymnasium import spaces as gym_spaces
@@ -13,7 +14,7 @@ except ImportError:
     pybullet_found = False
 
 from mushroom_rl.core import Environment, MDPInfo
-from mushroom_rl.rl_utils.spaces import *
+from mushroom_rl.utils.spaces import Box, Discrete
 from mushroom_rl.utils.viewer import ImageViewer
 
 gym.logger.set_level(40)
