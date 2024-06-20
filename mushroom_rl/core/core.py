@@ -231,7 +231,12 @@ class Core(object):
 
         self.agent.episode_start()
         
-        self._state = self._preprocess(self.mdp.reset(initial_state).copy())
+        reset_temp = self.mdp.reset(initial_state)
+        if isinstance(reset_temp, tuple):
+            state, episode_info = reset_temp  # For Gymnasium environments
+        else:
+            state = reset_temp  # For Gym environments
+        self._state = self._preprocess(state.copy())
         self.agent.next_action = None
         self._episode_steps = 0
 

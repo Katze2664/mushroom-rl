@@ -90,14 +90,12 @@ class Gymnasium(Environment):
     def reset(self, state=None):
         if state is None:
             state, info = self.env.reset()
-            # return np.atleast_1d(state), info
-            return np.atleast_1d(state)  # Only return state to be compatible with mushroom_rl.core.Core.reset()
+            return np.atleast_1d(state), info
         else:
             _, info = self.env.reset()
             self.env.state = state
 
-            # return np.atleast_1d(state), info
-            return np.atleast_1d(state)  # Only return state to be compatible with mushroom_rl.core.Core.reset()
+            return np.atleast_1d(state), info
 
     def step(self, action):
         action = self._convert_action(action)
