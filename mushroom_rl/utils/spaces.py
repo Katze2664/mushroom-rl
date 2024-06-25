@@ -1,7 +1,24 @@
 import numpy as np
+from numpy.typing import NDArray
+from typing import Any
 
 from mushroom_rl.core import Serializable
 
+def short_repr(arr: NDArray[Any]) -> str:  # Copied from gymnasium.spaces.box
+    """Create a shortened string representation of a numpy array.
+
+    If arr is a multiple of the all-ones vector, return a string representation of the multiplier.
+    Otherwise, return a string representation of the entire array.
+
+    Args:
+        arr: The array to represent
+
+    Returns:
+        A short representation of the array
+    """
+    if arr.size != 0 and np.min(arr) == np.max(arr):
+        return str(np.min(arr))
+    return str(arr)
 
 class Box(Serializable):
     """
@@ -76,6 +93,17 @@ class Box(Serializable):
 
     def _post_load(self):
         self._shape = self._low.shape
+    
+    def __repr__(self) -> str:  # Modified from gymnasium.spaces.box
+        """A string representation of this space.
+
+        The representation will include bounds and shape.
+        If a bound is uniform, only the corresponding scalar will be given to avoid redundant and ugly strings.
+
+        Returns:
+            A representation of the space
+        """
+        return f"Box(low={short_repr(self.low)}, high={short_repr(self.high)}, shape={self.shape})"
 
 
 class Discrete(Serializable):
@@ -117,3 +145,7 @@ class Discrete(Serializable):
 
         """
         return 1,
+
+    def __repr__(self) -> str:  # Modified from gymnasium.spaces.discrete
+        """Gives a string representation of this space."""
+        return f"Discrete(n={self.n})"
