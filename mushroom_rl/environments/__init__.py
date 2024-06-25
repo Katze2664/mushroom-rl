@@ -30,6 +30,13 @@ except ImportError:
     pass
 
 try:
+    MO_Gymnasium = None
+    from .mo_gymnasium_env import MO_Gymnasium
+    MO_Gymnasium.register()
+except ImportError:
+    pass
+
+try:
     DMControl = None
     from .dm_control_env import DMControl
     DMControl.register()
