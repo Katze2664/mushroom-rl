@@ -64,10 +64,14 @@ class Regressor(Serializable):
             approximator = Ensemble
 
         if n_actions is not None:
-            assert len(self._output_shape) == 1 and n_actions >= 2
+            assert n_actions >= 2
+            assert len(self._output_shape) == 1 or len(self._output_shape) == 2
+            # For single objective, self._output_shape == (n_actions,)
+            # For multi objective, self._output_shape == (n_actions, n_objectives)
             if n_actions == self._output_shape[0]:
                 self._impl = QRegressor(approximator, **params)
             else:
+                assert self._output_shape[0] == 1
                 self._impl = ActionRegressor(approximator, n_actions, **params)
         else:
             self._impl = GenericRegressor(approximator,

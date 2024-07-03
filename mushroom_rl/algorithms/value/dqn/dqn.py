@@ -53,7 +53,7 @@ class MO_DQN(AbstractDQN):
         assert len(next_q_all_actions.shape) == 3, f"{next_q_all_actions.shape=}"
         batch_size, n_actions, n_objectives = next_q_all_actions.shape
 
-        next_q_scalarized = np.apply_along_axis(func1d=self.scalarizer, axis=2, arr=q)
+        next_q_scalarized = np.apply_along_axis(func1d=self.scalarizer, axis=2, arr=next_q_all_actions)
         assert next_q_scalarized.shape == (batch_size, n_actions), f"{next_q_scalarized.shape=} {(batch_size, n_actions)=}"
 
         max_actions = np.argmax(next_q_scalarized, axis=1)

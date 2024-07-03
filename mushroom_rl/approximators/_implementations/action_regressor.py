@@ -26,12 +26,21 @@ class ActionRegressor(Serializable):
         """
         self.model = list()
         self._n_actions = n_actions
+        try:
+            self._output_shape = params["output_shape"]
+        except KeyError:
+            self._output_shape = (1,)
+        # For single objective, self._output_shape == (1,)
+        # For multi objective, self._output_shape == (1, n_objectives)
+        assert len(self._output_shape) == 1 or len(self._output_shape) == 2
+        assert self._output_shape[0] == 1
 
         for i in range(self._n_actions):
             self.model.append(approximator(**params))
 
         self._add_save_attr(
             _n_actions='primitive',
+            _output_shape='primitive',
             model=self._get_serialization_method(approximator)
         )
 
@@ -73,17 +82,25 @@ class ActionRegressor(Serializable):
         state = z[0]
         if len(z) == 2:
             action = z[1]
-            q = np.zeros(state.shape[0])
+            if len(self._output_shape) == 1:
+                q = np.zeros(state.shape[0])
+            else:
+                q = np.zeros((state.shape[0], self._output_shape[1]))
+            
             for i in range(self._n_actions):
                 idxs = np.argwhere((action == i)[:, 0]).ravel()
                 if idxs.size:
-                    q[idxs] = self.model[i].predict(state[idxs, :],
-                                                    **predict_params).squeeze()
+                    q[idxs] = self.model[i].predict(state[idxs],
+                                                    **predict_params).squeeze(axis=1)
         else:
-            q = np.zeros((state.shape[0], self._n_actions))
+            if len(self._output_shape) == 1:
+                q = np.zeros((state.shape[0], self._n_actions))
+            else:
+                q = np.zeros((state.shape[0], self._n_actions, self._output_shape[1]))
+            
             for i in range(self._n_actions):
                 q[:, i] = self.model[i].predict(state,
-                                                **predict_params).squeeze()
+                                                **predict_params).squeeze(axis=1)
 
         return q
 
