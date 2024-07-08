@@ -23,8 +23,8 @@ gym.logger.set_level(40)
 
 class MO_Gymnasium(Environment):
     """
-    Interface for MO_Gymnasium environments. It makes it possible to use every
-    MO_Gymnasium environment just providing the id, except for the Atari games that
+    Interface for MO-Gymnasium environments. It makes it possible to use every
+    MO-Gymnasium environment just providing the id, except for the Atari games that
     are managed in a separate class.
 
     """
@@ -34,7 +34,7 @@ class MO_Gymnasium(Environment):
         Constructor.
 
         Args:
-             name (str): gym id of the environment;
+             name (str): mo-gym id of the environment;
              horizon (int): the horizon. If None, use the one from Gym;
              gamma (float, 0.99): the discount factor;
              headless (bool, False): If True, the rendering is forced to be headless.

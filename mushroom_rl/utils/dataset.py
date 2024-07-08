@@ -23,7 +23,10 @@ def parse_dataset(dataset, features=None):
 
     state = np.ones((len(dataset),) + shape)
     action = np.ones((len(dataset),) + dataset[0][1].shape)
-    reward = np.ones(len(dataset))
+    if np.isscalar(dataset[0][2]):
+        reward = np.ones(len(dataset))
+    else:
+        reward = np.ones((len(dataset),) + dataset[0][2].shape)
     next_state = np.ones((len(dataset),) + shape)
     absorbing = np.ones(len(dataset))
     last = np.ones(len(dataset))
@@ -72,7 +75,7 @@ def arrays_as_dataset(states, actions, rewards, next_states, absorbings, lasts):
     for s, a, r, ss, ab, last in zip(states, actions, rewards, next_states,
                                      absorbings.astype(bool), lasts.astype(bool)
                                      ):
-        dataset.append((s, a, r.item(0), ss, ab.item(0), last.item(0)))
+        dataset.append((s, a, r, ss, ab.item(0), last.item(0)))
 
     return dataset
 
@@ -186,9 +189,17 @@ def compute_J(dataset, gamma=1.):
         The cumulative discounted reward of each episode in the dataset.
 
     """
+    if len(dataset) == 0:
+        return [np.nan]
+    
     js = list()
 
-    j = 0.
+    if np.isscalar(dataset[0][2]):
+        j = 0.
+    else:
+        assert isinstance(dataset[0][2], np.ndarray), f"{type(dataset[0][2])=} should be np.ndarray"
+        j = np.zeros_like(dataset[0][2])
+
     episode_steps = 0
     for i in range(len(dataset)):
         j += gamma ** episode_steps * dataset[i][2]
@@ -197,13 +208,11 @@ def compute_J(dataset, gamma=1.):
             js.append(j)
             j = 0.
             episode_steps = 0
-
-    if len(js) == 0:
-        return [0.]
+    
     return js
 
 
-def compute_metrics(dataset, gamma=1.):
+def compute_metrics(dataset, gamma=1., scalarizer=None):
     """
     Compute the metrics of each complete episode in the dataset.
 
@@ -218,7 +227,7 @@ def compute_metrics(dataset, gamma=1.):
         the median score reached,
         the number of completed episodes.
 
-        If no episode has been completed, it returns 0 for all values.
+        If no episode has been completed, it returns 0 for number of completed episodes and NaN for all other values.
 
     """
     for i in reversed(range(len(dataset))):
@@ -228,8 +237,17 @@ def compute_metrics(dataset, gamma=1.):
 
     dataset = dataset[:i]
 
-    if len(dataset) > 0:
-        J = compute_J(dataset, gamma)
-        return np.min(J), np.max(J), np.mean(J), np.median(J), len(J)
+    if len(dataset) == 0:
+        return np.nan, np.nan, np.nan, np.nan, 0
+    
+    js = compute_J(dataset, gamma)
+    if np.isscalar(js[0]):
+        return np.min(js), np.max(js), np.mean(js), np.median(js), len(js)
     else:
-        return 0, 0, 0, 0, 0
+        if scalarizer is None:
+            return np.nan, np.nan, np.nan, np.nan, len(js)
+        else:
+            js_scalarized = scalarizer(np.asarray(js))
+            assert js_scalarized.ndim == 1, f"{js_scalarized.ndim=} should be 1"
+            assert len(js_scalarized) == len(js), f"{len(js_scalarized)=} should be the same as {len(js)=}"
+            return np.min(js_scalarized), np.max(js_scalarized), np.mean(js_scalarized), np.median(js_scalarized), len(js_scalarized)

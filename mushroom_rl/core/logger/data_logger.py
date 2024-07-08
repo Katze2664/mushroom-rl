@@ -115,6 +115,15 @@ class DataLogger(object):
 
         with path.open(mode='wb') as f:
             pickle.dump(dataset, f)
+    
+    def log_obj(self, obj, name, epoch=None):
+        epoch_suffix = '' if epoch is None else '-' + str(epoch)
+
+        filename = name + self._suffix + epoch_suffix + '.pkl'
+        path = self._results_dir / filename
+
+        with path.open(mode='wb') as f:
+            pickle.dump(obj, f)
 
     @property
     def path(self):
