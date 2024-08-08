@@ -189,9 +189,6 @@ def compute_J(dataset, gamma=1.):
         The cumulative discounted reward of each episode in the dataset.
 
     """
-    if len(dataset) == 0:
-        return [np.nan]
-    
     js = list()
 
     if np.isscalar(dataset[0][2]):
@@ -208,7 +205,9 @@ def compute_J(dataset, gamma=1.):
             js.append(j)
             j = 0.
             episode_steps = 0
-    
+
+    if len(js) == 0:
+        return [0.]
     return js
 
 
@@ -227,7 +226,7 @@ def compute_metrics(dataset, gamma=1., scalarizer=None):
         the median score reached,
         the number of completed episodes.
 
-        If no episode has been completed, it returns 0 for number of completed episodes and NaN for all other values.
+        If no episode has been completed, it returns 0 for all values.
 
     """
     for i in reversed(range(len(dataset))):
@@ -238,16 +237,16 @@ def compute_metrics(dataset, gamma=1., scalarizer=None):
     dataset = dataset[:i]
 
     if len(dataset) == 0:
-        return np.nan, np.nan, np.nan, np.nan, 0
+        return 0, 0, 0, 0, 0
     
-    js = compute_J(dataset, gamma)
-    if np.isscalar(js[0]):
+    js = np.array(compute_J(dataset, gamma))
+    if js.ndim == 1:
         return np.min(js), np.max(js), np.mean(js), np.median(js), len(js)
-    else:
+    elif js.ndim == 2:
         if scalarizer is None:
             return np.nan, np.nan, np.nan, np.nan, len(js)
         else:
-            js_scalarized = scalarizer(np.asarray(js))
-            assert js_scalarized.ndim == 1, f"{js_scalarized.ndim=} should be 1"
-            assert len(js_scalarized) == len(js), f"{len(js_scalarized)=} should be the same as {len(js)=}"
+            js_scalarized = np.apply_along_axis(func1d=scalarizer, axis=1, arr=js)
             return np.min(js_scalarized), np.max(js_scalarized), np.mean(js_scalarized), np.median(js_scalarized), len(js_scalarized)
+    else:
+        raise ValueError(f"{js.shape=} must have 1 or 2 dimensions")
