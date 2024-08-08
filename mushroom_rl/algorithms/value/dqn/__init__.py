@@ -1,5 +1,5 @@
 from .abstract_dqn import AbstractDQN
-from .dqn import DQN, MO_DQN
+from .dqn import DQN
 from .double_dqn import DoubleDQN
 from .averaged_dqn import AveragedDQN
 from .maxmin_dqn import MaxminDQN
