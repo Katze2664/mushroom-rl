@@ -1,5 +1,5 @@
 import numpy as np
-
+from copy import deepcopy
 from mushroom_rl.core import Serializable
 from mushroom_rl.utils.parameters import to_parameter
 
@@ -24,6 +24,8 @@ class ReplayMemory(Serializable):
         self._max_size = max_size
 
         self.reset()
+        self.store_info = None
+        self.info_keys = None
 
         self._add_save_attr(
             _initial_size='primitive',
@@ -35,10 +37,11 @@ class ReplayMemory(Serializable):
             _rewards='pickle!',
             _next_states='pickle!',
             _absorbing='pickle!',
-            _last='pickle!'
+            _last='pickle!',
+            _info='pickle!'
         )
 
-    def add(self, dataset, n_steps_return=1, gamma=1.):
+    def add(self, dataset, n_steps_return=1, gamma=1., info=None):
         """
         Add elements to the replay memory.
 
@@ -48,11 +51,21 @@ class ReplayMemory(Serializable):
             gamma (float, 1.): discount factor for n-step return.
 
         """
+        if self.store_info is None:
+            if info is None:
+                self.store_info = False
+            else:
+                self.store_info = True
+                self.info_keys = info.keys()
+
         assert n_steps_return > 0
 
         i = 0
         while i < len(dataset) - n_steps_return + 1:
-            reward = dataset[i][2]
+            # if n_steps_return > 1 and dataset[i][2] is an array, ```reward = dataset[i][2]``` causes the dataset to be modified
+            # Using deepcopy or initialising ```reward = 0``` avoids modifying the dataset.
+            reward = 0
+            reward += dataset[i][2]
             j = 0
             while j < n_steps_return - 1:
                 if dataset[i + j][5]:
@@ -61,6 +74,7 @@ class ReplayMemory(Serializable):
                 j += 1
                 reward += gamma ** j * dataset[i + j][2]
             else:
+                # TODO: Use deepcopy as a precaution so that modifications to the dataset cannot impact the replay memory?
                 self._states[self._idx] = dataset[i][0]
                 self._actions[self._idx] = dataset[i][1]
                 self._rewards[self._idx] = reward
@@ -68,6 +82,8 @@ class ReplayMemory(Serializable):
                 self._next_states[self._idx] = dataset[i + j][3]
                 self._absorbing[self._idx] = dataset[i + j][4]
                 self._last[self._idx] = dataset[i + j][5]
+                if self.store_info:
+                    self._info[self._idx] = [(key, deepcopy(info[key][i + j])) for key in self.info_keys]  # deepcopy is just a precaution
 
                 self._idx += 1
                 if self._idx == self._max_size:
@@ -90,16 +106,24 @@ class ReplayMemory(Serializable):
         ss = list()
         ab = list()
         last = list()
+        if self.store_info:
+            info = {key: list() for key in self.info_keys}
         for i in np.random.randint(self.size, size=n_samples):
+            # TODO: Use deepcopy as a precaution so that modifications to returned samples cannot impact the replay memory?
             s.append(np.array(self._states[i]))
             a.append(self._actions[i])
             r.append(self._rewards[i])
             ss.append(np.array(self._next_states[i]))
             ab.append(self._absorbing[i])
             last.append(self._last[i])
+            if self.store_info:
+                for key, value in self._info[i]:
+                    info[key].append(deepcopy(value))  # deepcopy is just a precaution 
 
-        return np.array(s), np.array(a), np.array(r), np.array(ss),\
-            np.array(ab), np.array(last)
+        if self.store_info:
+            return np.array(s), np.array(a), np.array(r), np.array(ss), np.array(ab), np.array(last), info
+        else:
+            return np.array(s), np.array(a), np.array(r), np.array(ss), np.array(ab), np.array(last)
 
     def reset(self):
         """
@@ -114,6 +138,7 @@ class ReplayMemory(Serializable):
         self._next_states = [None for _ in range(self._max_size)]
         self._absorbing = [None for _ in range(self._max_size)]
         self._last = [None for _ in range(self._max_size)]
+        self._info = [None for _ in range(self._max_size)]
 
     @property
     def initialized(self):

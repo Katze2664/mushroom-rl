@@ -1,5 +1,5 @@
 from tqdm import tqdm
-
+from copy import deepcopy
 from collections import defaultdict
 from mushroom_rl.utils.record import VideoRecorder
 
@@ -9,7 +9,7 @@ class Core(object):
     Implements the functions to run a generic algorithm.
 
     """
-    def __init__(self, agent, mdp, callbacks_fit=None, callback_step=None, record_dictionary=None):
+    def __init__(self, agent, mdp, callbacks_fit=None, callback_step=None, record_dictionary=None, agent_info_keys=None):
         """
         Constructor.
 
@@ -24,8 +24,10 @@ class Core(object):
         self.mdp = mdp
         self.callbacks_fit = callbacks_fit if callbacks_fit is not None else list()
         self.callback_step = callback_step if callback_step is not None else lambda x: None
+        self.agent_info_keys = agent_info_keys
 
         self._state = None
+        self._agent_info = None
 
         self._total_episodes_counter = 0
         self._total_steps_counter = 0
@@ -199,7 +201,11 @@ class Core(object):
             state, the absorbing flag of the reached state and the last step flag.
 
         """
-        action = self.agent.draw_action(self._state)
+
+        if self.agent_info_keys is None:
+            action = self.agent.draw_action(self._state)
+        else:
+            action = self.agent.draw_action(self._state, self._agent_info)
         next_state, reward, absorbing, step_info = self.mdp.step(action)
 
         self._episode_steps += 1
@@ -216,6 +222,8 @@ class Core(object):
         state = self._state
         next_state = self._preprocess(next_state.copy())
         self._state = next_state
+        if self.agent_info_keys is not None:
+            self._agent_info = {key: deepcopy(step_info[key]) for key in self.agent_info_keys}  # deepcopy is just a precaution
 
         return (state, action, reward, next_state, absorbing, last), step_info
 
@@ -233,10 +241,13 @@ class Core(object):
         
         reset_temp = self.mdp.reset(initial_state)
         if isinstance(reset_temp, tuple):
-            state, episode_info = reset_temp  # For Gymnasium environments
+            state, step_info = reset_temp  # For Gymnasium environments
         else:
             state = reset_temp  # For Gym environments
+            step_info = {}
         self._state = self._preprocess(state.copy())
+        if self.agent_info_keys is not None:
+            self._agent_info = {key: deepcopy(step_info[key]) for key in self.agent_info_keys}  # deepcopy is just a precaution
         self.agent.next_action = None
         self._episode_steps = 0
 

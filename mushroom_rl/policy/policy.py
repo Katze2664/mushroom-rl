@@ -26,12 +26,13 @@ class Policy(Serializable):
         """
         raise NotImplementedError
 
-    def draw_action(self, state):
+    def draw_action(self, state, info=None):
         """
         Sample an action in ``state`` using the policy.
 
         Args:
             state (np.ndarray): the state where the agent is.
+            info (dict, None): additional info provided to the agent.
 
         Returns:
             The action sampled from the policy.

@@ -84,7 +84,7 @@ class AbstractDQN(Agent):
     def fit(self, dataset, **info):
         self._fit(dataset)
 
-        self._n_updates += 1
+        self._n_updates += 1  # TODO: only increment self._n_updates if self._replay_memory.initialized?
         if self._n_updates % self._target_update_frequency == 0:
             self._update_target()
 
@@ -121,8 +121,8 @@ class AbstractDQN(Agent):
             self.approximator.fit(state, action, q, weights=is_weight,
                                   **self._fit_params)
 
-    def draw_action(self, state):
-        action = super().draw_action(np.array(state))
+    def draw_action(self, state, info=None):
+        action = super().draw_action(np.array(state), info)
 
         return action
 
