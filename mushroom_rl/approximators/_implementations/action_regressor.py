@@ -108,9 +108,10 @@ class ActionRegressor(Serializable):
                     q_i = self.model[i].predict(state[idxs], **predict_params)
                     if self._objective_dim:
                         assert q_i.shape == (n_idxs, self._n_objectives)
+                        q[idxs, :] = q_i
                     else:
                         assert q_i.shape == (n_idxs,)
-                    q[idxs] = q_i
+                        q[idxs] = q_i
         else:
             if self._objective_dim:
                 q = np.zeros((batch_size, self._n_actions, self._n_objectives))
@@ -121,9 +122,10 @@ class ActionRegressor(Serializable):
                 q_i = self.model[i].predict(state, **predict_params)
                 if self._objective_dim:
                     assert q_i.shape == (batch_size, self._n_objectives)
+                    q[:, i, :] = q_i
                 else:
                     assert q_i.shape == (batch_size,)
-                q[:, i] = q_i
+                    q[:, i] = q_i
 
         return q
 
