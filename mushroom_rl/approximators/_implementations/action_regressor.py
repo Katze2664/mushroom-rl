@@ -93,33 +93,34 @@ class ActionRegressor(Serializable):
         if action is None:
             if self._objective_dim:
                 q = np.zeros((batch_size, self._n_actions, self._n_objectives))
-            else:
-                q = np.zeros((batch_size, self._n_actions))
-
-            for i in range(self._n_actions):
-                q_i = self.model[i].predict(state, **predict_params)
-                if self._objective_dim:
+                for i in range(self._n_actions):
+                    q_i = self.model[i].predict(state, **predict_params)
                     assert q_i.shape == (batch_size, self._n_objectives)
                     q[:, i, :] = q_i
-                else:
+            else:
+                q = np.zeros((batch_size, self._n_actions))
+                for i in range(self._n_actions):
+                    q_i = self.model[i].predict(state, **predict_params)
                     assert q_i.shape == (batch_size,)
                     q[:, i] = q_i
         else:
             assert action.shape == (batch_size, 1)
             if self._objective_dim:
                 q = np.zeros((batch_size, self._n_objectives))
-            else:
-                q = np.zeros(batch_size)
-
-            for i in range(self._n_actions):
-                idxs = np.argwhere((action == i)[:, 0]).ravel()
-                n_idxs = len(idxs)
-                if n_idxs > 0:
-                    q_i = self.model[i].predict(state[idxs], **predict_params)
-                    if self._objective_dim:
+                for i in range(self._n_actions):
+                    idxs = np.argwhere((action == i)[:, 0]).ravel()
+                    n_idxs = len(idxs)
+                    if n_idxs > 0:
+                        q_i = self.model[i].predict(state[idxs], **predict_params)
                         assert q_i.shape == (n_idxs, self._n_objectives)
                         q[idxs, :] = q_i
-                    else:
+            else:
+                q = np.zeros(batch_size)
+                for i in range(self._n_actions):
+                    idxs = np.argwhere((action == i)[:, 0]).ravel()
+                    n_idxs = len(idxs)
+                    if n_idxs > 0:
+                        q_i = self.model[i].predict(state[idxs], **predict_params)
                         assert q_i.shape == (n_idxs,)
                         q[idxs] = q_i
         return q
