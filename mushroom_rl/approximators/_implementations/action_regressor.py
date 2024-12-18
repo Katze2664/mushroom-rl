@@ -70,14 +70,13 @@ class ActionRegressor(Serializable):
             if idxs.size:
                 self.model[i].fit(state[idxs, :], q[idxs], **fit_params)
 
-    def predict(self, *z, **predict_params):
+    def predict(self, state, action=None, **predict_params):
         """
         Predict.
 
         Args:
-            *z: a list containing states or states and actions depending
-                on whether the call requires to predict all q-values or only
-                one q-value corresponding to the provided action;
+            state: state for which q-values should be returned
+            action[optional]: if provided, returns q-value corresponding to the provided action
             **predict_params: other parameters used by the predict method
                 of each regressor.
 
@@ -90,12 +89,23 @@ class ActionRegressor(Serializable):
         # squeezed. For this reason ActionRegressor.predict() must expect ActionRegressor.model[i].predict(state)
         # to return an array whose action dimension has been squeezed.
 
-        assert len(z) == 1 or len(z) == 2
-
-        state = z[0]
         batch_size = state.shape[0]
-        if len(z) == 2:
-            action = z[1]
+        if action is None:
+            if self._objective_dim:
+                q = np.zeros((batch_size, self._n_actions, self._n_objectives))
+            else:
+                q = np.zeros((batch_size, self._n_actions))
+
+            for i in range(self._n_actions):
+                q_i = self.model[i].predict(state, **predict_params)
+                if self._objective_dim:
+                    assert q_i.shape == (batch_size, self._n_objectives)
+                    q[:, i, :] = q_i
+                else:
+                    assert q_i.shape == (batch_size,)
+                    q[:, i] = q_i
+        else:
+            assert action.shape == (batch_size, 1)
             if self._objective_dim:
                 q = np.zeros((batch_size, self._n_objectives))
             else:
@@ -112,21 +122,6 @@ class ActionRegressor(Serializable):
                     else:
                         assert q_i.shape == (n_idxs,)
                         q[idxs] = q_i
-        else:
-            if self._objective_dim:
-                q = np.zeros((batch_size, self._n_actions, self._n_objectives))
-            else:
-                q = np.zeros((batch_size, self._n_actions))
-
-            for i in range(self._n_actions):
-                q_i = self.model[i].predict(state, **predict_params)
-                if self._objective_dim:
-                    assert q_i.shape == (batch_size, self._n_objectives)
-                    q[:, i, :] = q_i
-                else:
-                    assert q_i.shape == (batch_size,)
-                    q[:, i] = q_i
-
         return q
 
     def reset(self):
