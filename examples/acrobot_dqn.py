@@ -56,7 +56,9 @@ def experiment(n_epochs, n_steps, n_steps_test):
     horizon = 1000
     gamma = 0.99
     gamma_eval = 1.
-    mdp = Gym('Acrobot-v1', horizon, gamma)
+    # Requires mushroom_rl.environment.gymnasium_env.Gymnasium, rather than mushroom_rl.environment.gym_env.Gym
+    # because gym AcrobotEnv.reset() returns (state, episode_info) whilst Gym expects state
+    mdp = Gymnasium('Acrobot-v1', horizon, gamma)
 
     # Policy
     epsilon = LinearParameter(value=1., threshold_value=.01, n=5000)
