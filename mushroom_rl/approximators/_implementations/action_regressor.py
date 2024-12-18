@@ -77,6 +77,11 @@ class ActionRegressor(Serializable):
             The predictions of the model.
 
         """
+        # Note: To avoid incorrect broadcasting in the loss function of TorchApproximator.fit(), when using
+        # ActionRegressor then TorchApproximator.network(state) must return a tensor whose action dimension has been
+        # squeezed. For this reason ActionRegressor.predict() must expect ActionRegressor.model[i].predict(state)
+        # to return an array whose action dimension has been squeezed.
+
         assert len(z) == 1 or len(z) == 2
 
         state = z[0]
@@ -90,8 +95,7 @@ class ActionRegressor(Serializable):
             for i in range(self._n_actions):
                 idxs = np.argwhere((action == i)[:, 0]).ravel()
                 if idxs.size:
-                    q[idxs] = self.model[i].predict(state[idxs],
-                                                    **predict_params).squeeze(axis=1)
+                    q[idxs] = self.model[i].predict(state[idxs], **predict_params)
         else:
             if len(self._output_shape) == 1:
                 q = np.zeros((state.shape[0], self._n_actions))
@@ -99,8 +103,7 @@ class ActionRegressor(Serializable):
                 q = np.zeros((state.shape[0], self._n_actions, self._output_shape[1]))
             
             for i in range(self._n_actions):
-                q[:, i] = self.model[i].predict(state,
-                                                **predict_params).squeeze(axis=1)
+                q[:, i] = self.model[i].predict(state, **predict_params)
 
         return q
 

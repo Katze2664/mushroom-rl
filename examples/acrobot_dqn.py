@@ -37,7 +37,7 @@ class Network(nn.Module):
         q = self._h3(features2)
 
         if action is None:
-            return q
+            return q.squeeze(axis=1)
         else:
             action = action.long()
             q_acted = torch.squeeze(q.gather(1, action))
@@ -74,6 +74,12 @@ def experiment(n_epochs, n_steps, n_steps_test):
     n_features = 80
     train_frequency = 1
 
+    use_qregressor = False
+    if use_qregressor:
+        output_shape = mdp.info.action_space.size  # QRegressor
+    else:
+        output_shape = (1,)  # ActionRegressor
+    
     # Approximator
     input_shape = mdp.info.observation_space.shape
     approximator_params = dict(network=Network,
@@ -82,7 +88,7 @@ def experiment(n_epochs, n_steps, n_steps_test):
                                loss=F.smooth_l1_loss,
                                n_features=n_features,
                                input_shape=input_shape,
-                               output_shape=mdp.info.action_space.size,
+                               output_shape=output_shape,
                                n_actions=mdp.info.action_space.n)
 
     # Agent
