@@ -30,10 +30,18 @@ class ActionRegressor(Serializable):
             self._output_shape = params["output_shape"]
         except KeyError:
             self._output_shape = (1,)
+
         # For single objective, self._output_shape == (1,)
         # For multi objective, self._output_shape == (1, n_objectives)
-        assert len(self._output_shape) == 1 or len(self._output_shape) == 2
         assert self._output_shape[0] == 1
+        if len(self._output_shape) == 1:
+            self._objective_dim = False
+            self._n_objectives = 1
+        elif len(self._output_shape) == 2:
+            self._objective_dim = True
+            self._n_objectives = self._output_shape[1]
+        else:
+            raise ValueError(f"Invalid output shape: {self._output_shape}. Expected a shape with 1 or 2 dimensions.")
 
         for i in range(self._n_actions):
             self.model.append(approximator(**params))
@@ -95,7 +103,12 @@ class ActionRegressor(Serializable):
             for i in range(self._n_actions):
                 idxs = np.argwhere((action == i)[:, 0]).ravel()
                 if idxs.size:
-                    q[idxs] = self.model[i].predict(state[idxs], **predict_params)
+                    q_i = self.model[i].predict(state[idxs], **predict_params)
+                    if self._objective_dim:
+                        assert q_i.shape == (len(idxs), self._n_objectives)
+                    else:
+                        assert q_i.shape == (len(idxs),)
+                    q[idxs] = q_i
         else:
             if len(self._output_shape) == 1:
                 q = np.zeros((state.shape[0], self._n_actions))
@@ -103,7 +116,12 @@ class ActionRegressor(Serializable):
                 q = np.zeros((state.shape[0], self._n_actions, self._output_shape[1]))
             
             for i in range(self._n_actions):
-                q[:, i] = self.model[i].predict(state, **predict_params)
+                q_i = self.model[i].predict(state, **predict_params)
+                if self._objective_dim:
+                    assert q_i.shape == (state.shape[0], self._n_objectives)
+                else:
+                    assert q_i.shape == (state.shape[0],)
+                q[:, i] = q_i
 
         return q
 
