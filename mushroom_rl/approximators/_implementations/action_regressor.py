@@ -93,34 +93,36 @@ class ActionRegressor(Serializable):
         assert len(z) == 1 or len(z) == 2
 
         state = z[0]
+        batch_size = state.shape[0]
         if len(z) == 2:
             action = z[1]
-            if len(self._output_shape) == 1:
-                q = np.zeros(state.shape[0])
+            if self._objective_dim:
+                q = np.zeros((batch_size, self._n_objectives))
             else:
-                q = np.zeros((state.shape[0], self._output_shape[1]))
-            
+                q = np.zeros(batch_size)
+
             for i in range(self._n_actions):
                 idxs = np.argwhere((action == i)[:, 0]).ravel()
-                if idxs.size:
+                n_idxs = len(idxs)
+                if n_idxs > 0:
                     q_i = self.model[i].predict(state[idxs], **predict_params)
                     if self._objective_dim:
-                        assert q_i.shape == (len(idxs), self._n_objectives)
+                        assert q_i.shape == (n_idxs, self._n_objectives)
                     else:
-                        assert q_i.shape == (len(idxs),)
+                        assert q_i.shape == (n_idxs,)
                     q[idxs] = q_i
         else:
-            if len(self._output_shape) == 1:
-                q = np.zeros((state.shape[0], self._n_actions))
+            if self._objective_dim:
+                q = np.zeros((batch_size, self._n_actions, self._n_objectives))
             else:
-                q = np.zeros((state.shape[0], self._n_actions, self._output_shape[1]))
-            
+                q = np.zeros((batch_size, self._n_actions))
+
             for i in range(self._n_actions):
                 q_i = self.model[i].predict(state, **predict_params)
                 if self._objective_dim:
-                    assert q_i.shape == (state.shape[0], self._n_objectives)
+                    assert q_i.shape == (batch_size, self._n_objectives)
                 else:
-                    assert q_i.shape == (state.shape[0],)
+                    assert q_i.shape == (batch_size,)
                 q[:, i] = q_i
 
         return q
