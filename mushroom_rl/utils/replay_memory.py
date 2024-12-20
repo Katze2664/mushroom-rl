@@ -148,7 +148,7 @@ class ReplayMemory(Serializable):
             allows it to be used.
 
         """
-        return self.size > self._initial_size
+        return self.size >= self._initial_size  # Fixed bug but causes behaviour to be different to offical Mushroom_RL
 
     @property
     def size(self):
