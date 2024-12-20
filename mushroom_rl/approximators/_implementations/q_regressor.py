@@ -40,14 +40,13 @@ class QRegressor(Serializable):
         """
         self.model.fit(state, action, q, **fit_params)
 
-    def predict(self, *z, **predict_params):
+    def predict(self, state, action=None, **predict_params):
         """
         Predict.
 
         Args:
-            *z: a list containing states or states and actions depending
-                on whether the call requires to predict all q-values or only
-                one q-value corresponding to the provided action;
+            state: state for which q-values should be returned
+            action[optional]: if provided, returns q-value corresponding to the provided action
             **predict_params: other parameters used by the predict method
                 of each regressor.
 
@@ -55,18 +54,27 @@ class QRegressor(Serializable):
             The predictions of the model.
 
         """
-        assert len(z) == 1 or len(z) == 2
 
-        state = z[0]
+        batch_size = state.shape[0]
         q = self.model.predict(state, **predict_params)
+        assert q.shape[0] == batch_size
 
-        if len(z) == 2:
-            action = z[1].ravel()
+        if action is not None:
+            assert action.shape == (batch_size, 1)
+            action = action.ravel()
             if q.ndim == 1:
+                print(f"Warning: {q.shape=} only has 1 dimension. Is this the intended behaviour?")
                 return q[action]
+            elif q.ndim == 2:
+                return q[np.arange(batch_size), action]
+            elif q.ndim == 3:
+                return q[np.arange(batch_size), action, :]  # Multi-objective
             else:
-                return q[np.arange(q.shape[0]), action]
+                raise ValueError(f"Invalid shape of q array: {q.shape}. Expected a shape with 1, 2 or 3 dimensions.")
         else:
+            assert q.ndim in [1, 2, 3], f"Invalid q-value shape: {q.shape}. Expected a shape with 1, 2 or 3 dimensions."
+            if q.ndim == 1:
+                print(f"Warning: {q.shape=} only has 1 dimension. Is this the intended behaviour?")
             return q
 
     def reset(self):
