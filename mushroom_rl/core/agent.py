@@ -47,7 +47,7 @@ class Agent(Serializable):
         """
         raise NotImplementedError('Agent is an abstract class')
 
-    def draw_action(self, state, info=None):
+    def draw_action(self, state, info=None, get_action_info=False):
         """
         Return the action to execute in the given state. It is the action
         returned by the policy or the action set by the algorithm (e.g. in the
@@ -56,19 +56,27 @@ class Agent(Serializable):
         Args:
             state (np.ndarray): the state where the agent is.
             info (dict, None): additional info provided to the agent.
+            get_action_info (bool): whether to return policy's draw action info.
 
         Returns:
-            The action to be executed.
-
+            Union[Any, Tuple[Any, dict]]: The action to execute or a tuple containing the action and additional information (i.e. action_info).
         """
         if self.phi is not None:
             state = self.phi(state)
 
         if self.next_action is None:
-            if info is None:
-                return self.policy.draw_action(state)
+            if get_action_info:
+                if info is None:
+                    action, action_info = self.policy.draw_action(state, get_action_info=True)
+                else:
+                    action, action_info = self.policy.draw_action(state, info=info, get_action_info=True)
+                return action, action_info
             else:
-                return self.policy.draw_action(state, info)
+                if info is None:
+                    action = self.policy.draw_action(state)
+                else:
+                    action = self.policy.draw_action(state, info=info)
+                return action
         else:
             action = self.next_action
             self.next_action = None

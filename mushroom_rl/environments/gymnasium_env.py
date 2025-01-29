@@ -87,9 +87,16 @@ class Gymnasium(Environment):
 
         super().__init__(mdp_info)
 
-    def reset(self, state=None):
+    def reset(self, state=None, seed=None):
+        assert (state is None) or (seed is None), (
+            "At least one of `state` or `seed` must be None. Providing both is not permitted.\n"
+            f"{state=}\n{seed=}"
+        )
         if state is None:
-            state, info = self.env.reset()
+            if seed is None:
+                state, info = self.env.reset()
+            else:
+                state, info = self.env.reset(seed=seed)
             return np.atleast_1d(state), info
         else:
             _, info = self.env.reset()

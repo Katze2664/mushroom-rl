@@ -1,6 +1,7 @@
 from tqdm import tqdm
 from copy import deepcopy
 from collections import defaultdict
+import numpy as np
 from mushroom_rl.utils.record import VideoRecorder
 
 
@@ -74,16 +75,16 @@ class Core(object):
         if n_steps_per_fit is not None:
             fit_condition = lambda: self._current_steps_counter >= self._n_steps_per_fit
         else:
-            fit_condition = lambda: self._current_episodes_counter  >= self._n_episodes_per_fit
+            fit_condition = lambda: self._current_episodes_counter >= self._n_episodes_per_fit
 
         self._run(n_steps, n_episodes, fit_condition, render, quiet, record, get_env_info=False)
 
     def evaluate(self, initial_states=None, n_steps=None, n_episodes=None,
-                 render=False, quiet=False, record=False, get_env_info=False):
+                 render=False, quiet=False, record=False, get_env_info=False, seeds=None, get_action_info=False):
         """
         This function moves the agent in the environment using its policy.
-        The agent is moved for a provided number of steps, episodes, or from a set of initial states for the whole
-        episode. The environment is reset at the beginning of the learning process.
+        The agent is moved for a provided number of steps, episodes, or from a set of initial states or random seeds
+        for the whole episode. The environment is reset at the beginning of the learning process.
 
         Args:
             initial_states (np.ndarray, None): the starting states of each episode;
@@ -93,25 +94,34 @@ class Core(object):
             quiet (bool, False): whether to show the progress bar or not;
             record (bool, False): whether to record a video of the environment or not. If True, also the render flag
                 should be set to True;
-            get_env_info (bool, False): whether to return the environment info list or not.
+            get_env_info (bool, False): whether to include the environment info in the dataset info;
+            seeds (np.ndarray, None): the seeds to initialise the randomisation of the starting state of each episode;
+            get_action_info (bool, False): whether to include the agent's draw action info in the dataset info.
 
         Returns:
-            The collected dataset and, optionally, an extra dataset of
-            environment info, collected at each step.
-
+            The collected dataset and, optionally, an extra dataset containing the
+            environment info and/or agent's draw action info, collected at each step.
         """
         assert (render and record) or (not record), "To record, the render flag must be set to true"
 
         fit_condition = lambda: False
 
-        return self._run(n_steps, n_episodes, fit_condition, render, quiet, record, get_env_info, initial_states)
+        return self._run(n_steps, n_episodes, fit_condition, render, quiet, record, get_env_info, initial_states, seeds, get_action_info)
 
-    def _run(self, n_steps, n_episodes, fit_condition, render, quiet, record, get_env_info, initial_states=None):
-        assert n_episodes is not None and n_steps is None and initial_states is None\
-            or n_episodes is None and n_steps is not None and initial_states is None\
-            or n_episodes is None and n_steps is None and initial_states is not None
+    def _run(self, n_steps, n_episodes, fit_condition, render, quiet, record, get_env_info, initial_states=None, seeds=None, get_action_info=False):
+        assert sum([n_episodes is not None, n_steps is not None, initial_states is not None, seeds is not None]) == 1, (
+            "Exactly one of n_episodes, n_steps, initial_states or seeds must be not None.\n"
+            f"{n_episodes=}\n{n_steps=}\n{initial_states=}\n{seeds=}"
+        )
 
-        self._n_episodes = len( initial_states) if initial_states is not None else n_episodes
+        if n_episodes is not None:
+            self._n_episodes = n_episodes
+        elif initial_states is not None:
+            self._n_episodes = len(initial_states)
+        elif seeds is not None:
+            self._n_episodes = len(seeds)
+        else:
+            self._n_episodes = None
 
         if n_steps is not None:
             move_condition = lambda: self._total_steps_counter < n_steps
@@ -125,15 +135,15 @@ class Core(object):
             episodes_progress_bar = tqdm(total=self._n_episodes, dynamic_ncols=True, disable=quiet, leave=False)
 
         dataset, dataset_info = self._run_impl(move_condition, fit_condition, steps_progress_bar, episodes_progress_bar,
-                                               render, record, initial_states)
+                                               render, record, initial_states, seeds, get_action_info)
 
-        if get_env_info:
+        if get_env_info or get_action_info:
             return dataset, dataset_info
         else:
             return dataset
 
     def _run_impl(self, move_condition, fit_condition, steps_progress_bar, episodes_progress_bar, render, record,
-                  initial_states):
+                  initial_states, seeds, get_action_info):
         self._total_episodes_counter = 0
         self._total_steps_counter = 0
         self._current_episodes_counter = 0
@@ -145,9 +155,9 @@ class Core(object):
         last = True
         while move_condition():
             if last:
-                self.reset(initial_states)
+                self.reset(initial_states=initial_states, seeds=seeds)
 
-            sample, step_info = self._step(render, record)
+            sample, step_info = self._step(render, record, get_action_info)
 
             self.callback_step([sample])
 
@@ -189,24 +199,41 @@ class Core(object):
 
         return dataset, dataset_info
 
-    def _step(self, render, record):
+    def _step(self, render, record, get_action_info):
         """
         Single step.
 
         Args:
             render (bool): whether to render or not.
+            get_action_info (bool): whether to include the agent's draw action info in the step info.
 
         Returns:
             A tuple containing the previous state, the action sampled by the agent, the reward obtained, the reached
             state, the absorbing flag of the reached state and the last step flag.
 
         """
-
-        if self.agent_info_keys is None:
-            action = self.agent.draw_action(self._state)
+        if get_action_info:
+            if self.agent_info_keys is None:
+                action, action_info = self.agent.draw_action(self._state, get_action_info=True)
+            else:
+                action, action_info = self.agent.draw_action(self._state, info=self._agent_info, get_action_info=True)
         else:
-            action = self.agent.draw_action(self._state, self._agent_info)
+            action_info = {}
+            if self.agent_info_keys is None:
+                action = self.agent.draw_action(self._state)
+            else:
+                action = self.agent.draw_action(self._state, info=self._agent_info)
+
         next_state, reward, absorbing, step_info = self.mdp.step(action)
+
+        overlapping_keys = action_info.keys() & step_info.keys()
+        assert not overlapping_keys, (
+            "action_info and step_info have overlapping keys."
+            f"{overlapping_keys=}"
+            f"{action_info.keys()=}"
+            f"{step_info.keys()=}"
+        )
+        step_info.update(action_info)
 
         self._episode_steps += 1
 
@@ -227,23 +254,44 @@ class Core(object):
 
         return (state, action, reward, next_state, absorbing, last), step_info
 
-    def reset(self, initial_states=None):
+    def reset(self, initial_states=None, seeds=None):
         """
         Reset the state of the agent.
 
         """
-        if initial_states is None or self._total_episodes_counter == self._n_episodes:
+        assert (initial_states is None) or (seeds is None), (
+            "At least one of `initial_states` or `seeds` must be None. Providing both is not permitted.\n"
+            f"{initial_states=}\n"
+            f"{seeds=}"
+        )
+
+        if self._total_episodes_counter == self._n_episodes:  # TODO: In what circumstances would this occur?
+            # move_condition in _run_impl() ensures self._total_episodes_counter < self._n_episodes, so when could
+            # self._total_episodes_counter == self._n_episodes? Is it only when reset is called directly by the user?
+            assert (initial_states is None) and (seeds is None), (
+                "if self._total_episodes_counter == self._n_episodes, initial_states and seeds must both be None.\n"
+                f"{self._total_episodes_counter=}, {self._n_episodes=}, {initial_states=}, {seeds=}"
+            )
+
+        if initial_states is None:
             initial_state = None
         else:
             initial_state = initial_states[self._total_episodes_counter]
 
-        self.agent.episode_start()
-        
-        reset_temp = self.mdp.reset(initial_state)
-        if isinstance(reset_temp, tuple):
-            state, step_info = reset_temp  # For Gymnasium environments
+        if seeds is None:
+            seed = None
         else:
-            state = reset_temp  # For Gym environments
+            seed = seeds[self._total_episodes_counter]
+            assert isinstance(seed, (int, np.integer)), f"seed must be an integer (Python or NumPy), but got type {type(seed)}"
+            seed = int(seed)
+
+        self.agent.episode_start()
+
+        reset_output = self.mdp.reset(state=initial_state, seed=seed)
+        if isinstance(reset_output, tuple):
+            state, step_info = reset_output  # For Gymnasium environments
+        else:
+            state = reset_output  # For Gym environments
             step_info = {}
         self._state = self._preprocess(state.copy())
         if self.agent_info_keys is not None:
