@@ -282,8 +282,8 @@ class Core(object):
             seed = None
         else:
             seed = seeds[self._total_episodes_counter]
-            assert isinstance(seed, (int, np.integer)), f"seed must be an integer (Python or NumPy), but got type {type(seed)}"
-            seed = int(seed)
+            if isinstance(seed, np.integer):
+                seed = int(seed)
 
         self.agent.episode_start()
 

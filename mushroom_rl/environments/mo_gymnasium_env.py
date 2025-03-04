@@ -156,6 +156,7 @@ class MO_Gymnasium(Environment):
 
         if hasattr(env, '_max_episode_steps'):
             env._max_episode_steps = horizon
+            env._saved_kwargs["max_episode_steps"] = horizon
 
         return horizon
 
