@@ -1,5 +1,5 @@
 # Copied from dev branch of mushroom_rl
-# https://github.com/MushroomRL/mushroom-rl/blob/dev/mushroom_rl/utils/viewer.py
+# https://github.com/MushroomRL/mushroom-rl/blob/cc0dfe3ed9244ad8a35f88f788e447b68a2c08a7/mushroom_rl/utils/viewer.py
 
 import os
 if 'PYGAME_HIDE_SUPPORT_PROMPT' not in os.environ:

@@ -1,5 +1,5 @@
-# Copied from dev branch of mushroom_rl
-# https://github.com/MushroomRL/mushroom-rl/blob/dev/mushroom_rl/environments/__init__.py
+# Modified from dev branch of mushroom_rl
+# https://github.com/MushroomRL/mushroom-rl/blob/cc0dfe3ed9244ad8a35f88f788e447b68a2c08a7/mushroom_rl/environments/__init__.py
 
 try:
     Atari = None

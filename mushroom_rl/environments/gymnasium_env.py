@@ -1,5 +1,5 @@
-# Copied from dev branch of mushroom_rl
-# https://github.com/MushroomRL/mushroom-rl/blob/dev/mushroom_rl/environments/gymnasium_env.py
+# Modified from dev branch of mushroom_rl
+# https://github.com/MushroomRL/mushroom-rl/blob/cc0dfe3ed9244ad8a35f88f788e447b68a2c08a7/mushroom_rl/environments/gymnasium_env.py
 
 import warnings
 import numpy as np
@@ -27,14 +27,14 @@ class Gymnasium(Environment):
     are managed in a separate class.
 
     """
-    def __init__(self, name, horizon=None, gamma=0.99, headless = False, wrappers=None, wrappers_args=None,
+    def __init__(self, name, horizon=None, gamma=0.99, headless=False, wrappers=None, wrappers_args=None,
                  **env_args):
         """
         Constructor.
 
         Args:
-             name (str): gym id of the environment;
-             horizon (int): the horizon. If None, use the one from Gym;
+             name (str): gymnasium id of the environment;
+             horizon (int): the horizon. If None, use the one from Gymnasium;
              gamma (float, 0.99): the discount factor;
              headless (bool, False): If True, the rendering is forced to be headless.
              wrappers (list, None): list of wrappers to apply over the environment. It
@@ -57,11 +57,11 @@ class Gymnasium(Environment):
             pybullet.connect(pybullet.DIRECT)
             self._not_pybullet = False
 
-        self.env = gym.make(name, render_mode = 'rgb_array', **env_args) # always rgb_array render mode
+        self.env = gym.make(name, render_mode='rgb_array', **env_args) # always rgb_array render mode
 
         if wrappers is not None:
             if wrappers_args is None:
-                wrappers_args = [dict()] * len(wrappers)
+                wrappers_args = [list()] * len(wrappers)
             for wrapper, args in zip(wrappers, wrappers_args):
                 if isinstance(wrapper, tuple):
                     self.env = wrapper[0](self.env, *args, **wrapper[1])
@@ -154,6 +154,7 @@ class Gymnasium(Environment):
 
         if hasattr(env, '_max_episode_steps'):
             env._max_episode_steps = horizon
+            env._saved_kwargs["max_episode_steps"] = horizon
 
         return horizon
 
