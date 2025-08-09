@@ -1,5 +1,6 @@
 import sys
 import json
+import dill
 import torch
 import pickle
 import numpy as np
@@ -202,7 +203,7 @@ class Serializable(object):
     @staticmethod
     def _load_pickle(zip_file, name):
         with zip_file.open(name, 'r') as f:
-            return pickle.load(f)
+            return dill.load(f)
 
     @staticmethod
     def _load_numpy(zip_file, name):
@@ -212,7 +213,7 @@ class Serializable(object):
     @staticmethod
     def _load_torch(zip_file, name):
         with zip_file.open(name, 'r') as f:
-            return torch.load(f)
+            return torch.load(f, weights_only=False)
 
     @staticmethod
     def _load_json(zip_file, name):
@@ -227,7 +228,7 @@ class Serializable(object):
     def _save_pickle(zip_file, name, obj, folder, **_):
         path = Serializable._append_folder(folder, name)
         with zip_file.open(path, 'w') as f:
-            pickle.dump(obj, f, protocol=pickle.DEFAULT_PROTOCOL)
+            dill.dump(obj, f, protocol=pickle.DEFAULT_PROTOCOL)
 
     @staticmethod
     def _save_numpy(zip_file, name, obj, folder, **_):

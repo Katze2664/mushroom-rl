@@ -17,7 +17,7 @@ from mushroom_rl.core import Environment, MDPInfo
 from mushroom_rl.utils.spaces import Box, Discrete
 from mushroom_rl.utils.viewer import ImageViewer
 
-gym.logger.set_level(40)
+#gym.logger.set_level(40)
 
 
 class Gymnasium(Environment):

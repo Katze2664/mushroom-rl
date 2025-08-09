@@ -38,7 +38,9 @@ class ReplayMemory(Serializable):
             _next_states='pickle!',
             _absorbing='pickle!',
             _last='pickle!',
-            _info='pickle!'
+            _info='pickle!',
+            store_info='primitive!',
+            info_keys='primitive!'
         )
 
     def add(self, dataset, n_steps_return=1, gamma=1., info=None):
