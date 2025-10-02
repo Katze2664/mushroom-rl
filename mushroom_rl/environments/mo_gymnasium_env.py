@@ -18,7 +18,7 @@ from mushroom_rl.core import Environment, MDPInfo
 from mushroom_rl.utils.spaces import Box, Discrete
 from mushroom_rl.utils.viewer import ImageViewer
 
-gym.logger.set_level(40)
+#gym.logger.set_level(40)
 
 
 class MO_Gymnasium(Environment):
@@ -28,7 +28,7 @@ class MO_Gymnasium(Environment):
     are managed in a separate class.
 
     """
-    def __init__(self, name, horizon=None, gamma=0.99, headless=False, wrappers=None, wrappers_args=None,
+    def __init__(self, name, horizon=None, gamma=0.99, headless=False, wrappers=None, wrappers_args=None, seed_env=None,
                  **env_args):
         """
         Constructor.
@@ -77,17 +77,21 @@ class MO_Gymnasium(Environment):
         assert not isinstance(self.env.action_space, gym_spaces.MultiDiscrete)
 
         dt = self.env.unwrapped.dt if hasattr(self.env.unwrapped, "dt") else 0.1
-        action_space = self._convert_gym_space(self.env.action_space)
-        observation_space = self._convert_gym_space(self.env.observation_space)
-        reward_space = self._convert_gym_space(self.env.reward_space)
+        action_space = self._convert_gym_space(self.env.get_wrapper_attr("action_space"))
+        observation_space = self._convert_gym_space(self.env.get_wrapper_attr("observation_space"))
+        
+        reward_space = self._convert_gym_space(self.env.get_wrapper_attr("reward_space"))
         mdp_info = MDPInfo(observation_space, action_space, gamma, horizon, dt, reward_space)
-
+        
         if isinstance(action_space, Discrete):
             self._convert_action = lambda a: a[0]
         else:
             self._convert_action = lambda a: a
-
+        
         super().__init__(mdp_info)
+        self.env.action_space.seed(seed_env if seed_env is not None else 0)
+        self.env.observation_space.seed(seed_env if seed_env is not None else 0)
+        #self.env.reward_space.seed(seed_env if seed_env is not None else 0)
 
     def reset(self, state=None, seed=None):
         assert (state is None) or (seed is None), (
